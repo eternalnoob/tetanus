@@ -3,9 +3,9 @@ use std::io::{self, Write};
 
 use::rayon::prelude::*;
 
-const GRID_SIZE: usize = 120;
-const NUM_ITER: i32 = 100;
-const DESIRED_FRAMES: u64 = 20;
+const GRID_SIZE: usize = 220;
+const NUM_ITER: i32 = 150;
+const DESIRED_FRAMES: u64 = 120;
 const FRAME_DELAY: time::Duration = time::Duration::from_millis(1000 / DESIRED_FRAMES);
 
 enum Offset {
@@ -32,6 +32,16 @@ fn get_at(g: Grid, i: usize, j: usize) -> i8 {
     // row major
     g[i*GRID_SIZE + j]
 }
+
+fn vec_at(g: &Vec<i8>, i: usize, j: usize) -> i8 {
+    // row major
+    g[i*GRID_SIZE + j]
+}
+fn set_vec(g: &mut Vec<i8>, i: usize, j: usize, val: i8){
+    // row major
+    g[i*GRID_SIZE + j] = val
+}
+
 fn set_at(g: &mut Grid, i: usize, j: usize, val: i8){
     // row major
     g[i*GRID_SIZE + j] = val;
@@ -43,32 +53,26 @@ fn to_coord(i: usize) -> (usize, usize) {
 }
 
 fn main() {
-    let mut life_even = [0; GRID_SIZE*GRID_SIZE];
+    rayon::ThreadPoolBuilder::new().num_threads(20).build_global().unwrap();
+    //let mut life_even = [0; GRID_SIZE*GRID_SIZE];
 
     // simple blinker
-    set_at(&mut life_even, 1,1, 1);
-    set_at(&mut life_even, 1,2, 1);
-    set_at(&mut life_even, 1,3, 1);
-    set_at(&mut life_even, 1,4, 1);
-    set_at(&mut life_even, 1,5, 1);
+    let mut life_vec: Vec<i8> = vec![0; GRID_SIZE*GRID_SIZE];
+    set_vec(&mut life_vec, 1,1, 1);
+    set_vec(&mut life_vec, 1,2, 1);
+    set_vec(&mut life_vec, 1,3, 1);
+    set_vec(&mut life_vec, 1,4, 1);
+    set_vec(&mut life_vec, 1,5, 1);
 
-    let mut life_odd = [0; GRID_SIZE*GRID_SIZE];
+    //let mut life_odd = [0; GRID_SIZE*GRID_SIZE];
 
     let mut total_lag = time::Duration::from_millis(0);
 
     for i in 0..NUM_ITER {
         let now = time::Instant::now();
         println!("\niteration {}", i);
-        match i % 2 == 0 {
-            true => {
-                print_arr(life_even);
-                run_step(life_even, &mut life_odd)
-            },
-            false => { 
-                print_arr(life_odd);
-                run_step(life_odd, &mut life_even)
-            }
-        }
+        print_vec(&life_vec);
+        life_vec = run_vec_step(&life_vec);
         let passed = now.elapsed(); 
         match FRAME_DELAY.checked_sub(passed) {
             Some(d) => thread::sleep(d),
@@ -111,7 +115,7 @@ fn lives(src: Grid, i: usize, j: usize) -> bool {
     }
 }
 
-fn run_step(from: Grid, to: &mut Grid)  {
+fn run_step(from: Grid, to: &mut Grid) {
     for i in 0..from.len(){
         match from.get(i) {
             Some(_) => {
@@ -124,6 +128,58 @@ fn run_step(from: Grid, to: &mut Grid)  {
             },
             None => todo!(),
         }
+    }
+}
+
+fn run_vec_step(from: &Vec<i8>) -> Vec<i8>  {
+    /*
+    for i in 0..from.len(){
+        match from.get(i) {
+            Some(_) => {
+                let (i, j) = to_coord(i);
+                let res = match lives(from, i, j) {
+                    true => 1,
+                    false => 0,
+                };
+                set_at(to, i, j, res);
+            },
+            None => todo!(),
+        }
+    }
+    */
+    (0..from.len()).into_par_iter().map( |idx|
+        vec_lives(&from, idx)
+    ).collect()
+}
+
+
+fn vec_lives(src: &Vec<i8>, idx:usize) -> i8 {
+    let (i, j) = to_coord(idx); 
+    let neigh_alive: i8 = OFFSETS.map( |(i_o, j_o)|
+        {
+            let i_coord = get_coord(i, i_o);
+            let j_coord = get_coord(j, j_o);
+            match (i_coord, j_coord) {
+                (Some(i_d), Some(j_d)) => {
+                    if i_d >= GRID_SIZE || j_d >= GRID_SIZE {
+                        0
+                    } else {
+                       vec_at(&src, i_d, j_d)
+                    }
+                },
+                (_, _) => 0,
+            }
+        }
+    ).into_iter().sum();
+
+    match vec_at(&src, i, j) == 1 {
+        true => {
+            // we alive now
+            (neigh_alive == 2 || neigh_alive == 3).into()
+        },
+        false => {
+            (neigh_alive == 3).into()
+        },
     }
 }
 
@@ -147,4 +203,29 @@ fn print_arr(life_grid: Grid) {
         }
     }
     handle.flush().expect("y can't u print though");
+}
+
+fn print_vec(life_grid: &Vec<i8>) {
+
+    /*
+    let stdout = io::stdout();
+    let mut handle = io::BufWriter::new(stdout);
+
+    for i in 0..life_grid.len(){
+        if i % GRID_SIZE == 0 {
+            writeln!(handle, "").expect("toworklol");
+        } 
+        match life_grid.get(i) {
+            Some(life_row) => {
+                match life_row {
+                    0 => write!(handle, "\u{25FB} ").expect("towork"),
+                    1 => write!(handle, "\u{25FC} ").expect("justwork"),
+                    _ => panic!("lol impossible"),
+                }
+            },
+            None => panic!("my code never has bugs"),
+        }
+    }
+    handle.flush().expect("y can't u print though");
+    */
 }
