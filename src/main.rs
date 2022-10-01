@@ -18,7 +18,7 @@ use rand::distributions::{Distribution, Uniform};
 
 use::rayon::prelude::*;
 
-const GRID_SIZE: usize = 400;
+const GRID_SIZE: usize = 600;
 const NUM_ITER: i32 = 100;
 const DESIRED_FRAMES: u64 = 5;
 const FRAME_DELAY: time::Duration = time::Duration::from_millis(1000 / DESIRED_FRAMES);
