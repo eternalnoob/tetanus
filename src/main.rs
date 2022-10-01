@@ -14,7 +14,7 @@ use std::time;
 use rand::distributions::{Distribution, Uniform};
 use::rayon::prelude::*;
 
-const GRID_SIZE: usize = 600;
+const GRID_SIZE: usize = 700;
 const _NUM_ITER: i32 = 100;
 const DESIRED_FRAMES: u64 = 120;
 const _FRAME_DELAY: time::Duration = time::Duration::from_millis(1000 / DESIRED_FRAMES);
@@ -52,13 +52,10 @@ impl App {
         self.gl.draw(args.viewport(), |c, gl| {
             for i in  0..(GRID_SIZE*GRID_SIZE) {
                 let (row, col) = to_coord(i);
-
-                //(square_size + 1.0) * col as f64,
-                //(square_size + 1.0) * row as f64,
-                    let transform = c
-                        .transform
-                        .trans((square_size + 1.0) * col as f64, (square_size + 1.0) * row as f64);
-                    rectangle(COLORS[self.state[i] as usize], square, transform, gl);
+                let transform = c
+                    .transform
+                    .trans((square_size + 1.0) * col as f64, (square_size + 1.0) * row as f64);
+                rectangle(COLORS[self.state[i] as usize], square, transform, gl);
             }
         });
     }
