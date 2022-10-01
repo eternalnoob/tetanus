@@ -1,8 +1,9 @@
 use std::{thread, time};
+use std::io::{self, Write};
 
-const GRID_SIZE: usize = 10;
-const NUM_ITER: i32 = 10;
-const DESIRED_FRAMES: u64 = 5;
+const GRID_SIZE: usize = 100;
+const NUM_ITER: i32 = 100;
+const DESIRED_FRAMES: u64 = 15;
 const FRAME_DELAY: time::Duration = time::Duration::from_millis(1000 / DESIRED_FRAMES);
 
 enum Offset {
@@ -51,6 +52,8 @@ fn main() {
 
     let mut life_odd = [0; GRID_SIZE*GRID_SIZE];
 
+    let mut total_lag = time::Duration::from_millis(0);
+
     for i in 0..NUM_ITER {
         let now = time::Instant::now();
         println!("\niteration {}", i);
@@ -67,9 +70,14 @@ fn main() {
         let passed = now.elapsed(); 
         match FRAME_DELAY.checked_sub(passed) {
             Some(d) => thread::sleep(d),
-            None => {},
+            None => {
+                let delay = passed.checked_sub(FRAME_DELAY).expect("I'm gonna yartz");
+                // println!("oh wow yeah it's slow now boyo {:#?} ", delay);
+                total_lag = total_lag.saturating_add(delay);
+            },
         }
     }
+    println!("\ntotal lag from the slow iterations now {:#?} ", total_lag);
 }
 
 fn lives(src: Grid, i: usize, j: usize) -> bool {
@@ -118,19 +126,23 @@ fn run_step(from: Grid, to: &mut Grid) {
 }
 
 fn print_arr(life_grid: Grid) {
+    let stdout = io::stdout();
+    let mut handle = io::BufWriter::new(stdout);
+
     for i in 0..life_grid.len(){
         if i % GRID_SIZE == 0 {
-            println!("");
+            writeln!(handle, "").expect("toworklol");
         } 
         match life_grid.get(i) {
             Some(life_row) => {
                 match life_row {
-                    0 => print!("\u{25FB} "),
-                    1 => print!("\u{25FC} "),
+                    0 => write!(handle, "\u{25FB} ").expect("towork"),
+                    1 => write!(handle, "\u{25FC} ").expect("justwork"),
                     _ => panic!("lol impossible"),
                 }
             },
             None => panic!("my code never has bugs"),
         }
     }
+    handle.flush().expect("y can't u print though");
 }
