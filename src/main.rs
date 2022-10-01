@@ -3,10 +3,11 @@ use std::io::{self, Write};
 
 use::rayon::prelude::*;
 
-const GRID_SIZE: usize = 75;
+const GRID_SIZE: usize = 200;
 const NUM_ITER: i32 = 100;
-const DESIRED_FRAMES: u64 = 20;
+const DESIRED_FRAMES: u64 = 80;
 const FRAME_DELAY: time::Duration = time::Duration::from_millis(1000 / DESIRED_FRAMES);
+const PRINT_OUTPUT: bool = false;
 
 enum Offset {
     Neg(usize),
@@ -71,7 +72,9 @@ fn main() {
     for i in 0..NUM_ITER {
         let now = time::Instant::now();
         println!("\niteration {}", i);
-        print_vec(&life_vec);
+        if PRINT_OUTPUT {
+            print_vec(&life_vec);
+        }
         life_vec = run_vec_step(&life_vec);
         let passed = now.elapsed(); 
         match FRAME_DELAY.checked_sub(passed) {
@@ -132,21 +135,6 @@ fn run_step(from: Grid, to: &mut Grid) {
 }
 
 fn run_vec_step(from: &Vec<i8>) -> Vec<i8>  {
-    /*
-    for i in 0..from.len(){
-        match from.get(i) {
-            Some(_) => {
-                let (i, j) = to_coord(i);
-                let res = match lives(from, i, j) {
-                    true => 1,
-                    false => 0,
-                };
-                set_at(to, i, j, res);
-            },
-            None => todo!(),
-        }
-    }
-    */
     (0..from.len()).into_par_iter().map( |idx|
         vec_lives(&from, idx)
     ).collect()
@@ -203,16 +191,6 @@ fn print_arr(life_grid: Grid) {
         }
     }
     handle.flush().expect("y can't u print though");
-}
-
-fn map_vec_idx(life_vec: &Vec<i8>, idx: usize) -> &str {
-        match (idx%GRID_SIZE, &life_vec[idx]) {
-            (0, 0) => "\n\u{25FB} ",
-            (0, 1) => "\n\u{25FC} ",
-            (_, 0) => "\u{25FB} ",
-            (_, 1) => "\u{25FC} ",
-            (_, _) => "",
-        }
 }
 
 fn print_vec(life_grid: &Vec<i8>) {
