@@ -1,6 +1,8 @@
 use std::{thread, time};
 use std::io::{self, Write};
 
+use::rayon::prelude::*;
+
 const GRID_SIZE: usize = 100;
 const NUM_ITER: i32 = 100;
 const DESIRED_FRAMES: u64 = 15;
@@ -24,13 +26,13 @@ const OFFSETS: [(Offset, Offset); 8] = [
     (Offset::Pos(1), Offset::Neg(1)), (Offset::Pos(1), Offset::Pos(0)), (Offset::Pos(1), Offset::Pos(1)),
 ];
 
-type Grid = [i32; GRID_SIZE*GRID_SIZE];
+type Grid = [i8; GRID_SIZE*GRID_SIZE];
 
-fn get_at(g: Grid, i: usize, j: usize) -> i32 {
+fn get_at(g: Grid, i: usize, j: usize) -> i8 {
     // row major
     g[i*GRID_SIZE + j]
 }
-fn set_at(g: &mut Grid, i: usize, j: usize, val: i32){
+fn set_at(g: &mut Grid, i: usize, j: usize, val: i8){
     // row major
     g[i*GRID_SIZE + j] = val;
 }
@@ -81,7 +83,7 @@ fn main() {
 }
 
 fn lives(src: Grid, i: usize, j: usize) -> bool {
-    let neigh_alive: i32 = OFFSETS.map( |(i_o, j_o)|
+    let neigh_alive: i8 = OFFSETS.map( |(i_o, j_o)|
         {
             let i_coord = get_coord(i, i_o);
             let j_coord = get_coord(j, j_o);
@@ -109,7 +111,7 @@ fn lives(src: Grid, i: usize, j: usize) -> bool {
     }
 }
 
-fn run_step(from: Grid, to: &mut Grid) {
+fn run_step(from: Grid, to: &mut Grid)  {
     for i in 0..from.len(){
         match from.get(i) {
             Some(_) => {
