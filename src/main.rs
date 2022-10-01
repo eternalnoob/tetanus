@@ -2,7 +2,7 @@ use std::{thread, time};
 
 const GRID_SIZE: usize = 40;
 const NUM_ITER: i32 = 1000000;
-const DESIRED_FRAMES: u64 = 3;
+const DESIRED_FRAMES: u64 = 5;
 const FRAME_DELAY: time::Duration = time::Duration::from_millis(1000 / DESIRED_FRAMES);
 
 enum Offset {
@@ -25,7 +25,6 @@ const OFFSETS: [(Offset, Offset); 8] = [
 
 type Grid = [[i32; GRID_SIZE]; GRID_SIZE];
 
-
 fn main() {
     let mut life_even = [[0; GRID_SIZE] ; GRID_SIZE];
 
@@ -33,6 +32,8 @@ fn main() {
     life_even[1][1] = 1;
     life_even[1][2] = 1;
     life_even[1][3] = 1;
+    life_even[1][4] = 1;
+    life_even[1][5] = 1;
 
     let mut life_odd = [[0; GRID_SIZE] ; GRID_SIZE];
 
