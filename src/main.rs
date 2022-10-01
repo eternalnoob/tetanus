@@ -3,9 +3,9 @@ use std::io::{self, Write};
 
 use::rayon::prelude::*;
 
-const GRID_SIZE: usize = 100;
+const GRID_SIZE: usize = 120;
 const NUM_ITER: i32 = 100;
-const DESIRED_FRAMES: u64 = 15;
+const DESIRED_FRAMES: u64 = 20;
 const FRAME_DELAY: time::Duration = time::Duration::from_millis(1000 / DESIRED_FRAMES);
 
 enum Offset {
