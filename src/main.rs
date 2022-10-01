@@ -3,9 +3,9 @@ use std::io::{self, Write};
 
 use::rayon::prelude::*;
 
-const GRID_SIZE: usize = 220;
-const NUM_ITER: i32 = 150;
-const DESIRED_FRAMES: u64 = 120;
+const GRID_SIZE: usize = 75;
+const NUM_ITER: i32 = 100;
+const DESIRED_FRAMES: u64 = 20;
 const FRAME_DELAY: time::Duration = time::Duration::from_millis(1000 / DESIRED_FRAMES);
 
 enum Offset {
@@ -205,27 +205,24 @@ fn print_arr(life_grid: Grid) {
     handle.flush().expect("y can't u print though");
 }
 
-fn print_vec(life_grid: &Vec<i8>) {
-
-    /*
-    let stdout = io::stdout();
-    let mut handle = io::BufWriter::new(stdout);
-
-    for i in 0..life_grid.len(){
-        if i % GRID_SIZE == 0 {
-            writeln!(handle, "").expect("toworklol");
-        } 
-        match life_grid.get(i) {
-            Some(life_row) => {
-                match life_row {
-                    0 => write!(handle, "\u{25FB} ").expect("towork"),
-                    1 => write!(handle, "\u{25FC} ").expect("justwork"),
-                    _ => panic!("lol impossible"),
-                }
-            },
-            None => panic!("my code never has bugs"),
+fn map_vec_idx(life_vec: &Vec<i8>, idx: usize) -> &str {
+        match (idx%GRID_SIZE, &life_vec[idx]) {
+            (0, 0) => "\n\u{25FB} ",
+            (0, 1) => "\n\u{25FC} ",
+            (_, 0) => "\u{25FB} ",
+            (_, 1) => "\u{25FC} ",
+            (_, _) => "",
         }
-    }
-    handle.flush().expect("y can't u print though");
-    */
+}
+
+fn print_vec(life_grid: &Vec<i8>) {
+    print!("{}", (0..life_grid.len()).into_par_iter().map( |idx|
+        match (idx%GRID_SIZE, &life_grid[idx]) {
+            (0, 0) => "\n\u{25FB} ".to_string(),
+            (0, 1) => "\n\u{25FC} ".to_string(),
+            (_, 0) => "\u{25FB} ".to_string(),
+            (_, 1) => "\u{25FC} ".to_string(),
+            (_, _) => "".to_string(),
+        }
+    ).collect::<String>().to_string());
 }
