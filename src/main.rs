@@ -9,36 +9,97 @@ use piston::EventLoop;
 use piston::event_loop::{EventSettings, Events};
 use piston::input::{RenderArgs, RenderEvent};
 use piston::window::WindowSettings;
+use std::cmp::{max, min};
 use std::{cmp, usize};
 use std::time;
 use rand::distributions::{Distribution, Uniform};
 use::rayon::prelude::*;
 
-const GRID_SIZE: usize = 700;
+const GRID_SIZE: usize = 100;
 const _NUM_ITER: i32 = 100;
 const DESIRED_FRAMES: u64 = 120;
 const _FRAME_DELAY: time::Duration = time::Duration::from_millis(1000 / DESIRED_FRAMES);
 const _PRINT_OUTPUT: bool = false;
+const COLOR_COUNT: u8 = 10;
+
+type GuiState = (i8, u8); // current generation (or what generation it died at) and when it died
 
 
 pub struct App {
     gl: GlGraphics, // OpenGL drawing backend.
     state: Vec<u8>,
+    ages: Vec<GuiState>, // vec of current age, and when something changed state
 }
-const COLORS: [[f32; 4]; 2] = [
-    [0.0, 0.0, 0.0, 0.0],
-    [1.0, 1.0, 1.0, 1.0]
+
+// ages of cells to the color used to represent them
+const COLORS: [[f32; 4]; COLOR_COUNT as usize] = [
+    [1.00, 1.00, 1.00, 0.0],
+    [0.00, 1.00, 0.00, 1.0],
+    [0.25, 0.75, 0.00, 1.0],
+    [0.50, 0.50, 0.00, 1.0],
+    [0.75, 1.00, 0.00, 1.0],
+    [1.00, 0.00, 0.00, 1.0],
+    [0.75, 0.00, 0.25, 1.0],
+    [0.50, 0.00, 0.50, 1.0],
+    [0.25, 0.00, 0.75, 1.0],
+    [0.00, 0.00, 1.00, 1.0],
 ];
+
+
+const MAX_DEAD_AGE: f32 = 4.0;
+const ALPHA_DROPOFF: f32 = 0.25;
+fn mod_color(color: [f32; 4], died_ago: u8) -> [f32; 4] {
+    let mut a = color.clone();
+    // println!("modifying color {:?} that died {} generations ago", color, died_ago);
+    a[3] = a[3] - (ALPHA_DROPOFF * died_ago as f32);
+    a
+}
+
+fn get_color(state: (i8, u8), use_simple: bool) -> [f32; 4] {
+    // u8 is how long its been dead for
+    // i8 is what generation it is
+    match state {
+        (gen, dead_age) if gen > 0 => COLORS[min(gen as u8, COLOR_COUNT-1) as usize],
+        (gen, dead_age) if gen < 0 && !use_simple => {
+            // do some modulation to the color values to decay them?
+            mod_color(COLORS[(-1*gen) as usize], dead_age)
+        }
+        (_, _) => COLORS[0],
+    }
+}
+
 impl App {
+
+    fn update_ages(&mut self, status: &Vec<u8>) {
+        self.ages = (0..self.ages.len()).into_par_iter().map( |idx|
+            match (status[idx], self.ages[idx]) {
+                (1, (prev, dead_for)) => {
+                    (min(1 + max(prev,0), COLOR_COUNT as i8 -1), 0)
+                },
+
+                (0, (prev, dead_for)) if prev > 0 && dead_for == 0 => (-prev, 1), 
+
+                (0, (prev, dead_for)) if prev < 0 && dead_for > 0 => (prev, min(dead_for + 1, COLOR_COUNT)), 
+
+
+                (x,(y,z) ) => (0, 0),
+
+            }
+            //if status[idx] == 1 { min(self.ages[idx] + status[idx], COLOR_COUNT-1)  } else {0}
+        ).collect();
+        //print!("{:?}", self.ages);
+    }
+
     fn render(&mut self, args: &RenderArgs, status: &Vec<u8>) {
-        self.state = status.clone();
+        //self.state = status.clone();
+        self.update_ages(status);
         use graphics::*;
 
         const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 0.0];
 
         let square_size: f64 = (cmp::min(
-            (args.window_size[0] * 0.75) as usize,
-            (args.window_size[1] * 0.75) as usize) / GRID_SIZE
+            (args.window_size[0] * 0.8) as usize,
+            (args.window_size[1] * 0.8) as usize) / GRID_SIZE
         ) as f64;
 
         self.gl.draw(args.viewport(), |_, gl| {
@@ -55,7 +116,7 @@ impl App {
                 let transform = c
                     .transform
                     .trans((square_size + 1.0) * col as f64, (square_size + 1.0) * row as f64);
-                rectangle(COLORS[self.state[i] as usize], square, transform, gl);
+                rectangle(get_color(self.ages[i], false), square, transform, gl);
             }
         });
     }
@@ -120,6 +181,7 @@ fn main() {
     let mut app = App {
         gl: GlGraphics::new(opengl),
         state: life_vec.clone(),
+        ages: (0..GRID_SIZE*GRID_SIZE).map( |_| (0,0)).collect()
     };
 
     let mut events = Events::new(settings);
